@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DRIFT — generative studies</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;1,300&family=Cormorant+Garamond:ital,wght@0,300;1,300&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #080808;
+    --bg2: #0e0e0e;
+    --bg3: #141414;
+    --border: rgba(255,255,255,0.07);
+    --border-hover: rgba(255,255,255,0.15);
+    --text: rgba(255,255,255,0.75);
+    --text-dim: rgba(255,255,255,0.28);
+    --text-faint: rgba(255,255,255,0.1);
+    --accent: rgba(140,170,255,0.7);
+    --accent-dim: rgba(140,170,255,0.2);
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-weight: 300;
+    min-height: 100vh;
+    cursor: default;
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 36px;
+    background: linear-gradient(to bottom, rgba(8,8,8,0.95), transparent);
+    pointer-events: none;
+  }
+  .nav-logo {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-weight: 300;
+    font-size: 22px;
+    letter-spacing: 0.05em;
+    color: var(--text);
+  }
+  .nav-meta {
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    color: var(--text-dim);
+  }
+
+  /* ── HERO ── */
+  .hero {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 0 36px 52px;
+    position: relative;
+    overflow: hidden;
+  }
+  #hero-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+  .hero-content {
+    position: relative;
+    z-index: 2;
+  }
+  .hero-eyebrow {
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    color: var(--text-dim);
+    margin-bottom: 14px;
+  }
+  .hero-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-weight: 300;
+    font-size: clamp(52px, 8vw, 110px);
+    line-height: 0.9;
+    letter-spacing: -0.01em;
+    color: rgba(255,255,255,0.88);
+    margin-bottom: 28px;
+  }
+  .hero-desc {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    color: var(--text-dim);
+    max-width: 380px;
+    line-height: 2;
+  }
+  .hero-scroll {
+    position: absolute;
+    bottom: 52px;
+    right: 36px;
+    font-size: 9px;
+    letter-spacing: 0.22em;
+    color: var(--text-faint);
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .hero-scroll::before {
+    content: '';
+    display: block;
+    width: 0.5px;
+    height: 48px;
+    background: var(--text-faint);
+  }
+
+  /* ── SECTION ── */
+  .section-header {
+    padding: 80px 36px 36px;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    border-bottom: 0.5px solid var(--border);
+  }
+  .section-title {
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    color: var(--text-dim);
+  }
+  .section-count {
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    color: var(--text-faint);
+  }
+
+  /* ── GALLERY GRID ── */
+  .gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border-top: 0.5px solid var(--border);
+  }
+
+  .sketch-card {
+    background: var(--bg);
+    position: relative;
+    cursor: pointer;
+    overflow: hidden;
+    aspect-ratio: 4/3;
+    transition: background 0.3s;
+  }
+  .sketch-card:hover { background: var(--bg2); }
+  .sketch-card:hover .card-canvas-wrap { opacity: 1; }
+  .sketch-card:hover .card-overlay { opacity: 0; }
+  .sketch-card:hover .card-info { transform: translateY(0); opacity: 1; }
+
+  .card-canvas-wrap {
+    position: absolute;
+    inset: 0;
+    opacity: 0.45;
+    transition: opacity 0.6s ease;
+  }
+  .card-canvas-wrap canvas {
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  .card-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, var(--bg3) 0%, transparent 100%);
+    opacity: 1;
+    transition: opacity 0.5s;
+    pointer-events: none;
+  }
+
+  .card-meta {
+    position: absolute;
+    top: 20px;
+    left: 22px;
+    z-index: 2;
+  }
+  .card-num {
+    font-size: 9px;
+    letter-spacing: 0.22em;
+    color: var(--text-faint);
+    margin-bottom: 4px;
+  }
+  .card-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 20px;
+    font-weight: 300;
+    color: rgba(255,255,255,0.7);
+  }
+
+  .card-info {
+    position: absolute;
+    bottom: 20px;
+    left: 22px;
+    right: 22px;
+    z-index: 2;
+    transform: translateY(8px);
+    opacity: 0;
+    transition: all 0.3s ease;
+  }
+  .card-tags {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .tag {
+    font-size: 8px;
+    letter-spacing: 0.18em;
+    color: var(--text-dim);
+    border: 0.5px solid var(--border-hover);
+    padding: 3px 8px;
+  }
+
+  .card-open-btn {
+    position: absolute;
+    bottom: 20px;
+    right: 22px;
+    z-index: 3;
+    background: none;
+    border: 0.5px solid var(--border);
+    color: var(--text-dim);
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    padding: 7px 14px;
+    cursor: pointer;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: all 0.3s ease, background 0.2s, border-color 0.2s;
+  }
+  .sketch-card:hover .card-open-btn { opacity: 1; transform: translateY(0); }
+  .card-open-btn:hover { background: rgba(255,255,255,0.05); border-color: var(--border-hover); color: var(--text); }
+
+  /* ── FULLSCREEN MODAL ── */
+  .modal {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    background: #060606;
+    display: none;
+    flex-direction: column;
+  }
+  .modal.open { display: flex; }
+
+  .modal-header {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 28px;
+    background: linear-gradient(to bottom, rgba(6,6,6,0.9), transparent);
+  }
+  .modal-title-block { display: flex; flex-direction: column; gap: 3px; }
+  .modal-eyebrow { font-size: 9px; letter-spacing: 0.22em; color: var(--text-faint); }
+  .modal-name {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 18px;
+    font-weight: 300;
+    color: rgba(255,255,255,0.65);
+  }
+
+  .modal-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .modal-btn {
+    background: none;
+    border: 0.5px solid var(--border);
+    color: var(--text-dim);
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    padding: 6px 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .modal-btn:hover { border-color: var(--border-hover); color: var(--text); }
+  .modal-btn.palette-active { border-color: var(--accent-dim); color: var(--accent); }
+
+  .modal-canvas-wrap {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+  }
+  #modal-canvas { display: block; }
+
+  .modal-footer {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    padding: 20px 28px;
+    background: linear-gradient(to top, rgba(6,6,6,0.9), transparent);
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    pointer-events: none;
+  }
+  .modal-desc {
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    color: var(--text-faint);
+    line-height: 1.9;
+    max-width: 360px;
+  }
+  .modal-hint {
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    color: var(--text-faint);
+    text-align: right;
+    line-height: 2;
+  }
+
+  /* ── ABOUT ── */
+  .about {
+    padding: 100px 36px;
+    max-width: 560px;
+    border-top: 0.5px solid var(--border);
+  }
+  .about-label {
+    font-size: 9px;
+    letter-spacing: 0.25em;
+    color: var(--text-faint);
+    margin-bottom: 24px;
+  }
+  .about-text {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 22px;
+    font-weight: 300;
+    color: rgba(255,255,255,0.45);
+    line-height: 1.7;
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    padding: 36px;
+    border-top: 0.5px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .footer-text { font-size: 9px; letter-spacing: 0.2em; color: var(--text-faint); }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="nav-logo">Drift</span>
+  <span class="nav-meta">GENERATIVE STUDIES</span>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <canvas id="hero-canvas"></canvas>
+  <div class="hero-content">
+    <p class="hero-eyebrow">VISUAL EXPERIMENTS — 2025</p>
+    <h1 class="hero-title">Drift</h1>
+    <p class="hero-desc">A collection of generative sketches.<br>Code as medium. Motion as material.</p>
+  </div>
+  <div class="hero-scroll">SCROLL</div>
+</section>
+
+<!-- GALLERY -->
+<div class="section-header">
+  <span class="section-title">SKETCHES</span>
+  <span class="section-count">03 WORKS</span>
+</div>
+
+<div class="gallery" id="gallery"></div>
+
+<!-- ABOUT -->
+<div class="about">
+  <p class="about-label">PROCESS</p>
+  <p class="about-text">Each piece is written from scratch — no templates, no generators. Noise fields, particle systems, mathematical forms. The code runs live in your browser.</p>
+</div>
+
+<footer>
+  <span class="footer-text">DRIFT</span>
+  <span class="footer-text">GENERATIVE STUDIES — p5.js</span>
+</footer>
+
+<!-- FULLSCREEN MODAL -->
+<div class="modal" id="modal">
+  <div class="modal-header">
+    <div class="modal-title-block">
+      <span class="modal-eyebrow" id="modal-eyebrow">—</span>
+      <span class="modal-name" id="modal-name">—</span>
+    </div>
+    <div class="modal-controls" id="modal-controls">
+      <button class="modal-btn" id="modal-reseed">RESEED</button>
+      <button class="modal-btn" id="modal-close">CLOSE ×</button>
+    </div>
+  </div>
+  <div class="modal-canvas-wrap" id="modal-canvas-wrap"></div>
+  <div class="modal-footer">
+    <p class="modal-desc" id="modal-desc"></p>
+    <p class="modal-hint">click to reseed<br>drag to disturb</p>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+<script>
+
+// ─── SKETCH DEFINITIONS ───────────────────────────────────────────────
+
+const SKETCHES = [
+  {
+    id: 'flow',
+    num: '001',
+    title: 'Flow',
+    subtitle: 'field / perlin noise / ocean drift',
+    desc: 'particles follow a three-octave perlin noise vector field. the field evolves slowly over time. drag to disturb.',
+    tags: ['flow field', 'perlin noise', 'particles'],
+    palettes: ['OCEAN', 'EMBER', 'VOID'],
+    build: buildFlow
+  },
+  {
+    id: 'tide',
+    num: '002',
+    title: 'Tide',
+    subtitle: 'sine waves / interference / coastal forms',
+    desc: 'layered sine waves interfere to produce coastal contour forms. time drives the phase offset.',
+    tags: ['sine waves', 'interference', 'lines'],
+    palettes: ['DUSK', 'SHORE', 'DEEP'],
+    build: buildTide
+  },
+  {
+    id: 'grain',
+    num: '003',
+    title: 'Grain',
+    subtitle: 'noise texture / colour drift / analog',
+    desc: 'a pixel noise field whose hue drifts slowly over time. feels like film grain breathing.',
+    tags: ['noise', 'texture', 'analog'],
+    palettes: ['SILVER', 'RUST', 'NIGHT'],
+    build: buildGrain
+  }
+];
+
+// ─── HERO SKETCH ──────────────────────────────────────────────────────
+
+new p5(function(p) {
+  let pts = [], cols, rows, field, zOff = 0;
+  const N = 900, RES = 16;
+  p.setup = function() {
+    let c = p.createCanvas(window.innerWidth, window.innerHeight);
+    c.parent('hero-canvas');
+    document.getElementById('hero-canvas').appendChild(c.elt);
+    p.colorMode(p.HSB,360,100,100,100);
+    p.pixelDensity(1);
+    init();
+  };
+  function init() {
+    cols = Math.floor(p.width/RES)+2;
+    rows = Math.floor(p.height/RES)+2;
+    field = new Array(cols*rows);
+    p.background(0,0,3);
+    pts = [];
+    for(let i=0;i<N;i++) pts.push(newPt());
+  }
+  function newPt() {
+    return {
+      x: p.random(p.width), y: p.random(p.height),
+      px: 0, py: 0, vx: 0, vy: 0,
+      h: p.random(190,230), a: p.random(15,45),
+      w: p.random(0.3,1.1), life: p.floor(p.random(120,300)), age: 0
+    };
+  }
+  p.draw = function() {
+    p.noStroke(); p.fill(0,0,3,6); p.rect(0,0,p.width,p.height);
+    for(let y=0;y<rows;y++) for(let x=0;x<cols;x++) {
+      let a = p.noise(x*0.1,y*0.1,zOff)*p.TWO_PI*2.2 + p.noise(x*0.22,y*0.22,zOff*1.4+5)*p.PI*0.6;
+      field[x+y*cols] = {x:Math.cos(a), y:Math.sin(a)};
+    }
+    zOff += 0.00045;
+    for(let pt of pts) {
+      let cx = p.constrain(Math.floor(pt.x/RES),0,cols-1);
+      let cy = p.constrain(Math.floor(pt.y/RES),0,rows-1);
+      let f = field[cx+cy*cols];
+      pt.vx = (pt.vx + f.x)*0.9; pt.vy = (pt.vy + f.y)*0.9;
+      let spd = Math.sqrt(pt.vx*pt.vx+pt.vy*pt.vy); if(spd>2){pt.vx*=2/spd;pt.vy*=2/spd;}
+      pt.px=pt.x; pt.py=pt.y; pt.x+=pt.vx; pt.y+=pt.vy; pt.age++;
+      let fade = pt.age<20?pt.age/20:pt.age>pt.life-20?(pt.life-pt.age)/20:1;
+      p.stroke(pt.h,22,88,pt.a*fade); p.strokeWeight(pt.w);
+      p.line(pt.px,pt.py,pt.x,pt.y);
+      if(pt.age>pt.life||pt.x<0||pt.x>p.width||pt.y<0||pt.y>p.height) Object.assign(pt,newPt());
+    }
+  };
+  p.windowResized = function() { p.resizeCanvas(window.innerWidth,window.innerHeight); init(); };
+});
+
+// ─── CARD THUMBNAILS ─────────────────────────────────────────────────
+
+const gallery = document.getElementById('gallery');
+const cardInstances = {};
+
+SKETCHES.forEach((sk, i) => {
+  const card = document.createElement('div');
+  card.className = 'sketch-card';
+  card.innerHTML = `
+    <div class="card-canvas-wrap" id="thumb-wrap-${sk.id}"></div>
+    <div class="card-overlay"></div>
+    <div class="card-meta">
+      <div class="card-num">${sk.num}</div>
+      <div class="card-title">${sk.title}</div>
+    </div>
+    <div class="card-info">
+      <div class="card-tags">${sk.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>
+    </div>
+    <button class="card-open-btn" data-id="${sk.id}">OPEN →</button>
+  `;
+  gallery.appendChild(card);
+
+  // lazy-init thumbnail on hover
+  let inited = false;
+  card.addEventListener('mouseenter', () => {
+    if(inited) return; inited = true;
+    sk.build('thumb-wrap-'+sk.id, 0, true);
+  });
+
+  card.querySelector('.card-open-btn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    openModal(sk);
+  });
+  card.addEventListener('click', () => openModal(sk));
+});
+
+// ─── MODAL ───────────────────────────────────────────────────────────
+
+let activeInst = null;
+let activePaletteIdx = 0;
+
+function openModal(sk) {
+  document.getElementById('modal-eyebrow').textContent = sk.num + ' / ' + sk.subtitle;
+  document.getElementById('modal-name').textContent = sk.title;
+  document.getElementById('modal-desc').textContent = sk.desc;
+  const wrap = document.getElementById('modal-canvas-wrap');
+  wrap.innerHTML = '';
+
+  // palette buttons
+  const ctrl = document.getElementById('modal-controls');
+  ctrl.innerHTML = '';
+  activePaletteIdx = 0;
+  sk.palettes.forEach((name, idx) => {
+    const b = document.createElement('button');
+    b.className = 'modal-btn' + (idx===0?' palette-active':'');
+    b.textContent = name;
+    b.addEventListener('click', () => {
+      activePaletteIdx = idx;
+      ctrl.querySelectorAll('.modal-btn').forEach((x,i)=>x.classList.toggle('palette-active',i===idx));
+      if(activeInst && activeInst._setPalette) activeInst._setPalette(idx);
+    });
+    ctrl.appendChild(b);
+  });
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'modal-btn'; closeBtn.textContent = 'CLOSE ×';
+  closeBtn.addEventListener('click', closeModal);
+  ctrl.appendChild(closeBtn);
+
+  const reseed = document.createElement('button');
+  reseed.className = 'modal-btn'; reseed.textContent = 'RESEED';
+  reseed.addEventListener('click', () => { if(activeInst && activeInst._reset) activeInst._reset(); });
+  ctrl.insertBefore(reseed, closeBtn);
+
+  activeInst = sk.build('modal-canvas-wrap', activePaletteIdx, false);
+  document.getElementById('modal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+  document.body.style.overflow = '';
+  if(activeInst && activeInst._destroy) activeInst._destroy();
+  document.getElementById('modal-canvas-wrap').innerHTML = '';
+  activeInst = null;
+}
+
+document.addEventListener('keydown', e => { if(e.key==='Escape') closeModal(); });
+
+
+// ─── SKETCH: FLOW ────────────────────────────────────────────────────
+
+function buildFlow(containerId, paletteIdx, isThumb) {
+  const PALS = [
+    { bg:[0,0,5], hMin:185, hMax:230, sat:30, bri:90, trail:9 },
+    { bg:[0,0,5], hMin:18,  hMax:52,  sat:80, bri:92, trail:11 },
+    { bg:[0,0,4], hMin:260, hMax:300, sat:28, bri:78, trail:8 }
+  ];
+  let inst = {};
+  new p5(function(p) {
+    let particles=[], cols, rows, field, zOff=0, pg, pal=PALS[paletteIdx];
+    const N = isThumb ? 400 : 2200, RES = isThumb ? 12 : 8;
+    inst._p5 = p;
+    inst._setPalette = (idx) => { pal = PALS[idx]; inst._reset(); };
+    inst._reset = () => { pg.background(...pal.bg,255); for(let pt of particles) pt.reset(); zOff=p.random(500); };
+    inst._destroy = () => p.remove();
+
+    p.setup = function() {
+      const wrap = document.getElementById(containerId);
+      const w = wrap.offsetWidth, h = wrap.offsetHeight;
+      let c = p.createCanvas(w, h);
+      c.parent(containerId);
+      p.colorMode(p.HSB,360,100,100,100); p.pixelDensity(1);
+      pg = p.createGraphics(w,h); pg.colorMode(p.HSB,360,100,100,100); pg.pixelDensity(1);
+      pg.background(...pal.bg,255);
+      cols=Math.floor(w/RES)+2; rows=Math.floor(h/RES)+2;
+      field=new Array(cols*rows);
+      for(let i=0;i<N;i++) particles.push(newPt());
+      zOff=p.random(500);
+    };
+
+    function newPt() {
+      return {
+        pos: p.createVector(p.random(p.width),p.random(p.height)),
+        prev: p.createVector(0,0),
+        vel: p5.Vector.random2D().mult(p.random(0.4,1.3)),
+        acc: p.createVector(0,0),
+        h: p.random(pal.hMin,pal.hMax), s:pal.sat+p.random(-12,12),
+        b:pal.bri+p.random(-12,6), a:p.random(20,55),
+        w:p.random(0.3,1.5), life:p.floor(p.random(120,350)), age:0, spd:p.random(1.2,3)
+      };
+    }
+
+    p.draw = function() {
+      pg.noStroke(); pg.fill(...pal.bg,pal.trail); pg.rect(0,0,p.width,p.height);
+      for(let y=0;y<rows;y++) for(let x=0;x<cols;x++) {
+        let a = p.noise(x*0.09,y*0.09,zOff)*p.TWO_PI*2
+               +p.noise(x*0.2,y*0.2,zOff*1.3+10)*p.PI*0.7
+               +p.noise(x*0.43,y*0.43,zOff*2.1+30)*p.PI*0.25;
+        field[x+y*cols]={x:Math.cos(a),y:Math.sin(a)};
+      }
+      zOff+=0.00055;
+      for(let pt of particles) {
+        let cx=p.constrain(Math.floor(pt.pos.x/RES),0,cols-1);
+        let cy=p.constrain(Math.floor(pt.pos.y/RES),0,rows-1);
+        let f=field[cx+cy*cols]; pt.acc.add(p.createVector(f.x,f.y));
+        pt.prev.set(pt.pos);
+        pt.vel.add(pt.acc); pt.vel.limit(pt.spd); pt.pos.add(pt.vel); pt.acc.mult(0); pt.age++;
+        let fade=pt.age<30?pt.age/30:pt.age>pt.life-30?(pt.life-pt.age)/30:1;
+        pg.stroke(pt.h,pt.s,pt.b,pt.a*fade); pg.strokeWeight(pt.w);
+        pg.line(pt.prev.x,pt.prev.y,pt.pos.x,pt.pos.y);
+        if(pt.age>pt.life||pt.pos.x<-2||pt.pos.x>p.width+2||pt.pos.y<-2||pt.pos.y>p.height+2)
+          Object.assign(pt,newPt());
+      }
+      p.image(pg,0,0);
+      if(!isThumb) {
+        let ctx=p.drawingContext;
+        let g=ctx.createRadialGradient(p.width/2,p.height/2,p.height*0.2,p.width/2,p.height/2,p.height*0.85);
+        g.addColorStop(0,'rgba(0,0,0,0)'); g.addColorStop(1,'rgba(0,0,0,0.5)');
+        ctx.fillStyle=g; ctx.fillRect(0,0,p.width,p.height);
+      }
+    };
+    p.mousePressed = function() { inst._reset(); };
+  });
+  return inst;
+}
+
+// ─── SKETCH: TIDE ────────────────────────────────────────────────────
+
+function buildTide(containerId, paletteIdx, isThumb) {
+  const PALS = [
+    { bg:'#080c10', lines:['#1a3a5c','#2d6a8a','#5ba3b8','#a8d4dc','#e8f4f0'] },
+    { bg:'#100c08', lines:['#4a2010','#8a4a22','#c4823a','#e8b870','#f8e8c0'] },
+    { bg:'#080810', lines:['#1a1a3c','#2d2d6a','#4a4aaa','#8888cc','#ccccee'] }
+  ];
+  let inst = {};
+  new p5(function(p) {
+    let t=0, pal=PALS[paletteIdx];
+    inst._p5=p; inst._setPalette=(idx)=>{pal=PALS[idx];}; inst._reset=()=>{t=p.random(1000);};
+    inst._destroy=()=>p.remove();
+    p.setup=function(){
+      const wrap=document.getElementById(containerId);
+      let c=p.createCanvas(wrap.offsetWidth,wrap.offsetHeight);
+      c.parent(containerId); p.pixelDensity(1);
+    };
+    p.draw=function(){
+      p.background(pal.bg);
+      const LINES=isThumb?40:80, cols=pal.lines;
+      for(let i=0;i<LINES;i++){
+        let y0=p.map(i,0,LINES,p.height*0.05,p.height*0.95);
+        let ci=Math.floor(p.map(i,0,LINES,0,cols.length-0.01));
+        p.stroke(cols[ci]); p.strokeWeight(isThumb?0.6:0.8); p.noFill();
+        p.beginShape();
+        for(let x=0;x<=p.width;x+=isThumb?8:4){
+          let nx=x/p.width;
+          let wave=
+            Math.sin(nx*6.2+t*0.8+i*0.15)*18
+           +Math.sin(nx*12.4-t*0.5+i*0.28)*9
+           +Math.sin(nx*3.1+t*0.3-i*0.1)*28
+           +Math.sin(nx*24.8+t*1.2+i*0.42)*4;
+          p.curveVertex(x,y0+wave);
+        }
+        p.endShape();
+      }
+      t+=0.006;
+    };
+    p.mousePressed=function(){t=p.random(1000);};
+  });
+  return inst;
+}
+
+// ─── SKETCH: GRAIN ───────────────────────────────────────────────────
+
+function buildGrain(containerId, paletteIdx, isThumb) {
+  const PALS = [
+    { hBase:0,   hRange:30,  sat:0,  bri:85 },
+    { hBase:20,  hRange:40,  sat:55, bri:75 },
+    { hBase:220, hRange:50,  sat:30, bri:70 }
+  ];
+  let inst={};
+  new p5(function(p){
+    let t=0, pal=PALS[paletteIdx], zSeed=0;
+    inst._p5=p; inst._setPalette=(idx)=>{pal=PALS[idx];}; inst._reset=()=>{zSeed=p.random(500);};
+    inst._destroy=()=>p.remove();
+    const STEP=isThumb?5:3;
+    p.setup=function(){
+      const wrap=document.getElementById(containerId);
+      let c=p.createCanvas(wrap.offsetWidth,wrap.offsetHeight);
+      c.parent(containerId); p.colorMode(p.HSB,360,100,100,100); p.pixelDensity(1); p.noStroke();
+    };
+    p.draw=function(){
+      p.background(0,0,4);
+      for(let y=0;y<p.height;y+=STEP){
+        for(let x=0;x<p.width;x+=STEP){
+          let n=p.noise(x*0.006,y*0.006,t*0.4+zSeed);
+          let n2=p.noise(x*0.02,y*0.02,t*0.8+zSeed+100);
+          let b=p.map(n,0,1,15,pal.bri);
+          let s=p.map(n2,0,1,0,pal.sat);
+          let h=(pal.hBase+p.map(n,0,1,0,pal.hRange)+360)%360;
+          let a=p.map(n,0,1,40,90);
+          p.fill(h,s,b,a);
+          p.rect(x,y,STEP,STEP);
+        }
+      }
+      t+=0.004;
+    };
+    p.mousePressed=function(){zSeed=p.random(500);};
+  });
+  return inst;
+}
+
+</script>
+</body>
+</html>
